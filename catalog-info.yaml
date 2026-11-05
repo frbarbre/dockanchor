@@ -7,6 +7,6 @@ metadata:
     github.com/project-slug: frbarbre/dockanchor
     backstage.io/techdocs-ref: url:https://mytechdocsstorage.blob.core.windows.net/techdocs/frbarbre/dockanchor/
 spec:
-  type: website
-  lifecycle: production
+  type: tool
+  lifecycle: experimental
   owner: frbarbre
