@@ -13,6 +13,7 @@ final class Controller {
     private var pollTimer: Timer?
     private var screenAreas: [CGDirectDisplayID: ScreenArea] = [:]
     private var dockThickness: CGFloat = 0
+    private var pendingMove: Display?
 
     init() {
         config = (try? store.load()) ?? Config()
@@ -112,11 +113,20 @@ final class Controller {
     }
 
     func moveDock(to display: Display) {
-        guard !locker.suspended else { return }
+        // Moves can't overlap (both drive the cursor), so the newest request waits for the running one.
+        guard !locker.suspended else {
+            pendingMove = display
+            return
+        }
         locker.suspended = true
         DockMover.move(to: display.frame, orientation: DockOrientation.current()) { [weak self] moved in
-            self?.locker.suspended = false
+            guard let self else { return }
+            self.locker.suspended = false
             if !moved { NSLog("DockAnchor: Dock did not move to \(display.name)") }
+            if let next = self.pendingMove {
+                self.pendingMove = nil
+                self.moveDock(to: next)
+            }
         }
     }
 
