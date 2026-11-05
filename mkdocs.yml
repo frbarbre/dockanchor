@@ -1,7 +1,12 @@
-site_name: dockanchor
+site_name: DockAnchor
 docs_dir: docs
 nav:
   - Home: index.md
+  - Installation: installation.md
+  - Usage: usage.md
+  - Raycast: raycast.md
+  - How it works: how-it-works.md
+  - Development: development.md
 
 plugins:
-  - techdocs-core   
+  - techdocs-core

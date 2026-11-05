@@ -37,6 +37,8 @@ When the Dock moves to another display, resizes, or a display is plugged in or o
 - **Resize Maximized Windows**: fit maximized windows to the Dock automatically (on by default)
 - **Hotkeys…**, **Launch at Login**, **Quit**
 
+The first line of the menu shows the current state (locked display, no lock for this setup, or locking off). While Accessibility hasn't been granted, the menu also shows *Grant Accessibility Access…*.
+
 ## Hotkeys
 
 | Action | Default |
@@ -62,15 +64,31 @@ The CLI edits the same config file as the app (`~/Library/Application Support/Do
 
 ## Raycast
 
-In Raycast, open **Extensions → + → Add Script Directory** and pick this repo's `raycast/` folder. You get:
+The [`raycast/`](raycast/) folder holds Raycast script commands. They work on Raycast's free plan.
 
-- Lock Dock to Display (argument)
-- Lock Dock Here
-- Lock Dock to Next Display
-- Toggle Dock Lock
-- Unlock Dock
+1. Open Raycast Settings (**⌘ ,**) → **Script Commands** → **Add Script Directory**.
+   On Raycast 1.x this was **Extensions → + → Add Script Directory** instead.
+2. Press **⌘⇧G**, paste `~/Documents/github/dockanchor/raycast` (or wherever you cloned the repo), and confirm.
+3. Type "dock" in Raycast to find the commands.
 
-Each script calls the `dockanchor` CLI and falls back to the copy inside `/Applications/DockAnchor.app`. Script commands are free on every Raycast plan.
+| Command | What it does |
+| --- | --- |
+| Lock Dock to Display | Asks for a display (name, number, `cursor`, `next`) and locks the Dock to it |
+| Lock Dock Here | Locks to the display under the cursor |
+| Lock Dock to Next Display | Cycles the lock through your displays |
+| Toggle Dock Lock | Turns locking on/off |
+| Unlock Dock | Removes the lock for the current screen setup |
+
+To give a command a hotkey or alias, select it under **Script Commands** in Raycast Settings.
+
+Each script calls the `dockanchor` CLI from `~/.local/bin`, `/opt/homebrew/bin` or `/usr/local/bin`. If none is found, it uses the copy inside `/Applications/DockAnchor.app`. Raycast runs the scripts from the folder you added, so keep the repo where it is.
+
+## Troubleshooting
+
+- **The Dock doesn't move or isn't locked.** Check that DockAnchor is enabled under System Settings → Privacy & Security → Accessibility. If you built with ad-hoc signing, remove the entry and add it again after each rebuild.
+- **Raycast says `dockanchor: command not found`.** Run `make install`, or check that `/Applications/DockAnchor.app` exists.
+- **A maximized window wasn't resized.** Only windows that fill their screen are touched (gaps up to 24pt are allowed). Half-screen and freely placed windows are left alone by design. Restarting the app runs a pass over all windows.
+- **Check the current state.** `dockanchor status` shows the locked display and the display the Dock is actually on.
 
 ## Development
 
@@ -78,6 +96,7 @@ Each script calls the `dockanchor` CLI and falls back to the copy inside `/Appli
 swift build
 make test
 make run    # build the .app bundle into ./build and launch it
+make icon   # regenerate Resources/AppIcon.icns from scripts/make-icon.swift
 ```
 
-The code is split into three modules: `DockAnchorCore` (displays, config, edge clamping, Dock mover; shared and unit tested), `DockAnchorApp` (menu bar app) and `DockAnchorCLI` (the `dockanchor` binary, shipped in `DockAnchor.app/Contents/Helpers`).
+The code is split into three modules: `DockAnchorCore` (displays, config, edge clamping, Dock mover, window fitting; shared and unit tested), `DockAnchorApp` (menu bar app) and `DockAnchorCLI` (the `dockanchor` binary, shipped in `DockAnchor.app/Contents/Helpers`).
