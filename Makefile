@@ -5,7 +5,7 @@ BIN_DIR ?= $(HOME)/.local/bin
 SIGN_IDENTITY ?= $(shell security find-identity -v -p codesigning 2>/dev/null | grep -m1 -o '"Apple Development[^"]*"' | tr -d '"' || true)
 SIGN := $(if $(SIGN_IDENTITY),$(SIGN_IDENTITY),-)
 
-.PHONY: app icon test install uninstall run clean
+.PHONY: app icon test install uninstall run release clean
 
 app:
 	swift build -c release --product DockAnchorApp
@@ -47,6 +47,9 @@ uninstall:
 run: app
 	-pkill -x DockAnchor
 	open $(APP)
+
+release:
+	./scripts/release.sh
 
 clean:
 	rm -rf .build build

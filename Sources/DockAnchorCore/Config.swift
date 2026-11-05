@@ -42,6 +42,7 @@ public struct SetupLock: Codable, Equatable {
 public struct Config: Codable, Equatable {
     public var enabled: Bool
     public var resizeMaximizedWindows: Bool
+    public var autoUpdate: Bool
     public var setups: [String: SetupLock]
     /// String keys keep the JSON hand-editable and tolerant of unknown actions.
     public var hotkeys: [String: Hotkey]
@@ -58,11 +59,13 @@ public struct Config: Codable, Equatable {
     public init(
         enabled: Bool = true,
         resizeMaximizedWindows: Bool = true,
+        autoUpdate: Bool = true,
         setups: [String: SetupLock] = [:],
         hotkeys: [String: Hotkey] = Config.defaultHotkeys
     ) {
         self.enabled = enabled
         self.resizeMaximizedWindows = resizeMaximizedWindows
+        self.autoUpdate = autoUpdate
         self.setups = setups
         self.hotkeys = hotkeys
     }
@@ -71,6 +74,7 @@ public struct Config: Codable, Equatable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
         resizeMaximizedWindows = try c.decodeIfPresent(Bool.self, forKey: .resizeMaximizedWindows) ?? true
+        autoUpdate = try c.decodeIfPresent(Bool.self, forKey: .autoUpdate) ?? true
         setups = try c.decodeIfPresent([String: SetupLock].self, forKey: .setups) ?? [:]
         hotkeys = try c.decodeIfPresent([String: Hotkey].self, forKey: .hotkeys) ?? Config.defaultHotkeys
     }

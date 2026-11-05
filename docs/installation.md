@@ -1,5 +1,23 @@
 # Installation
 
+## Homebrew (Apple silicon)
+
+```sh
+brew tap frbarbre/dockanchor https://github.com/frbarbre/dockanchor
+brew install --cask frbarbre/dockanchor/dockanchor
+```
+
+The repo is its own tap, and the cask lives at `Casks/dockanchor.rb`. The cask:
+
+- installs `DockAnchor.app` and puts the `dockanchor` CLI on your `PATH`,
+- uses `version :latest`, so it always downloads the newest release and no release ever needs a cask change,
+- sets `auto_updates true`, so DockAnchor [updates itself](#updates) and `brew upgrade` leaves it alone unless you pass `--greedy`,
+- removes the quarantine flag after install, because the app is signed with an Apple Development certificate rather than a notarized Developer ID, and Gatekeeper would otherwise refuse to open it.
+
+Uninstall with `brew uninstall --cask dockanchor`. Add `--zap` to also remove saved locks and hotkeys.
+
+## From source
+
 ```sh
 git clone https://github.com/frbarbre/dockanchor.git
 cd dockanchor
@@ -39,7 +57,26 @@ The Makefile signs with the first `Apple Development` identity in your keychain.
 make install INSTALL_DIR=~/Applications BIN_DIR=/usr/local/bin
 ```
 
-## Uninstall
+## Updates
+
+DockAnchor checks `releases/latest/download/latest.json` 15 seconds after launch and then every 6 hours. When the manifest names a newer version, the app:
+
+1. downloads `DockAnchor.zip` and checks it against the manifest's SHA-256,
+2. writes a swap script to `~/Library/Application Support/DockAnchor/updates/` and starts it in its own session, so it outlives the app,
+3. quits.
+
+The script then:
+
+1. waits for the app to exit,
+2. expands the zip with `ditto`,
+3. checks that the result is a launchable app,
+4. moves the installed app to `updates/DockAnchor.previous.app`, moves the new one into place and relaunches it.
+
+Every failure path relaunches the version that is still installed. The script logs to `updates/update.log`.
+
+Turn off *Install Updates Automatically* in the menu to update only through *Check for Updates…*. That item turns into *Install Update x.y.z* when a newer version is known.
+
+## Uninstall (source install)
 
 ```sh
 make uninstall

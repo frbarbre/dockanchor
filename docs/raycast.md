@@ -21,6 +21,7 @@ Raycast runs the scripts from the folder you added, so don't move or delete the 
 | Lock Dock to Next Display | `dockanchor lock next` |
 | Toggle Dock Lock | `dockanchor toggle` |
 | Unlock Dock | `dockanchor unlock` |
+| Toggle DockAnchor at Login | `dockanchor login toggle` |
 
 Every command runs in `silent` mode, so Raycast shows the CLI's last line of output (for example *Dock locked to PL2797Q*) as a short notification.
 

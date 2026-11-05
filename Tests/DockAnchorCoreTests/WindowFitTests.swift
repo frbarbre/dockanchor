@@ -2,6 +2,35 @@ import CoreGraphics
 import XCTest
 @testable import DockAnchorCore
 
+final class UpdateTests: XCTestCase {
+    func testVersionComparison() {
+        XCTAssertTrue(Updates.isNewer("0.2.0", than: "0.1.0"))
+        XCTAssertTrue(Updates.isNewer("v1.10.0", than: "1.9.3"))
+        XCTAssertTrue(Updates.isNewer("0.1.1", than: "0.1"))
+        XCTAssertFalse(Updates.isNewer("0.1.0", than: "0.1.0"))
+        XCTAssertFalse(Updates.isNewer("0.1.0", than: "0.2.0"))
+    }
+
+    func testManifestDecodes() throws {
+        let json = #"{"version":"0.2.0","sha256":"abc","file":"DockAnchor.zip"}"#
+        let manifest = try JSONDecoder().decode(UpdateManifest.self, from: Data(json.utf8))
+        XCTAssertEqual(manifest, UpdateManifest(version: "0.2.0", sha256: "abc", file: "DockAnchor.zip"))
+    }
+
+    func testSwapScriptQuotesPathsAndRelaunchesOnEveryFailure() {
+        let script = Updates.swapScript(UpdateSwapPlan(
+            appPath: "/Applications/DockAnchor.app", pid: 42, zipPath: "/tmp/it's.zip",
+            stagingDir: "/tmp/staging", backupPath: "/tmp/prev.app", logPath: "/tmp/log"
+        ))
+        XCTAssertTrue(script.contains("kill -0 42"))
+        XCTAssertTrue(script.contains("'/tmp/it'\\''s.zip'"))
+        let exits = script.components(separatedBy: "exit 1").count - 1
+        let relaunches = script.components(separatedBy: "/usr/bin/open '/Applications/DockAnchor.app' || true").count - 1
+        XCTAssertEqual(exits, 4)
+        XCTAssertEqual(relaunches, exits)
+    }
+}
+
 final class WindowFitTests: XCTestCase {
     let screen = CGRect(x: 0, y: 0, width: 3440, height: 1440)
     let withDock = CGRect(x: 0, y: 33, width: 3440, height: 1407 - 80)

@@ -15,6 +15,8 @@ commands:
   unlock              Remove the lock for the current screen setup
   enable | disable    Turn Dock locking on or off globally
   toggle              Flip Dock locking on/off
+  login [on|off|toggle|status]
+                      Start DockAnchor at login (app must be running)
   setups              List saved screen setups
 
 <display> is a 1-based index from `list`, a (partial) name, a UUID, or one of: main, cursor, next.
@@ -67,6 +69,23 @@ func warnIfAppNotRunning() {
     if !IPC.isAppRunning {
         FileHandle.standardError.write(Data("note: DockAnchor.app is not running; the change applies on next launch\n".utf8))
     }
+}
+
+func requestLaunchAtLogin(_ action: String) throws -> (state: String, error: String?) {
+    guard IPC.isAppRunning else { throw CLIError(message: "DockAnchor.app must be running (open -a DockAnchor)") }
+    var reply: [AnyHashable: Any]?
+    let observer = DistributedNotificationCenter.default().addObserver(
+        forName: IPC.launchAtLoginState, object: nil, queue: nil
+    ) { reply = $0.userInfo ?? [:] }
+    defer { DistributedNotificationCenter.default().removeObserver(observer) }
+
+    IPC.post(IPC.launchAtLogin, userInfo: [IPC.actionKey: action])
+    let deadline = Date().addingTimeInterval(3)
+    while reply == nil && Date() < deadline {
+        RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+    }
+    guard let reply else { throw CLIError(message: "DockAnchor.app did not answer") }
+    return (reply[IPC.stateKey] as? String ?? "unknown", reply[IPC.errorKey] as? String)
 }
 
 func run() throws {
@@ -135,6 +154,18 @@ func run() throws {
         try save(config)
         warnIfAppNotRunning()
         print("Dock locking \(config.enabled ? "enabled" : "disabled")")
+
+    case "login":
+        var action = positional.dropFirst().first ?? "status"
+        guard ["on", "off", "toggle", "status"].contains(action) else {
+            throw CLIError(message: "usage: dockanchor login [on|off|toggle|status]")
+        }
+        if action == "toggle" {
+            action = try requestLaunchAtLogin("status").state == "enabled" ? "off" : "on"
+        }
+        let reply = try requestLaunchAtLogin(action)
+        if let error = reply.error { throw CLIError(message: "\(error) (launch at login: \(reply.state))") }
+        print("Launch at login: \(reply.state)")
 
     case "setups":
         let entries = config.setups.sorted { $0.key < $1.key }

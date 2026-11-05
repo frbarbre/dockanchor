@@ -95,6 +95,11 @@ final class Controller {
         if let display = Displays.next(after: current, in: displays) { lock(to: display) }
     }
 
+    func setAutoUpdate(_ enabled: Bool) {
+        config.autoUpdate = enabled
+        save()
+    }
+
     func setResizeMaximizedWindows(_ enabled: Bool) {
         config.resizeMaximizedWindows = enabled
         save()

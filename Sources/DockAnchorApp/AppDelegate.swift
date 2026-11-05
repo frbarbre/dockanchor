@@ -1,10 +1,10 @@
 import AppKit
 import DockAnchorCore
-import ServiceManagement
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let controller = Controller()
     private let hotkeys = HotkeyCenter()
+    private let updater = Updater()
     private var statusItem: NSStatusItem!
     private var settings: SettingsWindowController?
     private var registeredHotkeys: [String: Hotkey]?
@@ -15,9 +15,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.delegate = self
         statusItem.menu = menu
 
+        LaunchAtLogin.listenForCLI()
         controller.onChange = { [weak self] in self?.refresh() }
         controller.start()
         refresh()
+        updater.start { [weak self] in self?.controller.config.autoUpdate ?? false }
     }
 
     private func refresh() {
@@ -97,10 +99,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(.separator())
         menu.addItem(item("Hotkeys…", #selector(openSettings), key: ","))
         let login = item("Launch at Login", #selector(toggleLaunchAtLogin))
-        login.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        login.state = LaunchAtLogin.isEnabled ? .on : .off
         menu.addItem(login)
+
+        menu.addItem(.separator())
+        menu.addItem(updateItem())
+        let autoUpdate = item("Install Updates Automatically", #selector(toggleAutoUpdate))
+        autoUpdate.state = controller.config.autoUpdate ? .on : .off
+        menu.addItem(autoUpdate)
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit DockAnchor", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+    }
+
+    private func updateItem() -> NSMenuItem {
+        switch updater.state {
+        case .checking:
+            let entry = NSMenuItem(title: "Checking for Updates…", action: nil, keyEquivalent: "")
+            entry.isEnabled = false
+            return entry
+        case .installing(let version):
+            let entry = NSMenuItem(title: "Installing \(version)…", action: nil, keyEquivalent: "")
+            entry.isEnabled = false
+            return entry
+        case .available(let manifest):
+            return item("Install Update \(manifest.version)", #selector(installUpdate))
+        default:
+            return item("Check for Updates… (v\(updater.currentVersion))", #selector(checkForUpdates))
+        }
     }
 
     private func item(_ title: String, _ action: Selector, key: String = "") -> NSMenuItem {
@@ -122,6 +147,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func toggleEnabled() { controller.setEnabled(!controller.config.enabled) }
     @objc private func unlockSetup() { controller.unlock() }
+    @objc private func toggleAutoUpdate() { controller.setAutoUpdate(!controller.config.autoUpdate) }
+
+    @objc private func installUpdate() {
+        if case .available(let manifest) = updater.state { updater.install(manifest) }
+    }
+
+    @objc private func checkForUpdates() {
+        updater.check(install: false) { [weak self] state in
+            guard let self else { return }
+            let alert = NSAlert()
+            switch state {
+            case .available(let manifest):
+                alert.messageText = "DockAnchor \(manifest.version) is available"
+                alert.informativeText = "You have \(self.updater.currentVersion). DockAnchor restarts after installing."
+                alert.addButton(withTitle: "Install and Restart")
+                alert.addButton(withTitle: "Later")
+                NSApp.activate(ignoringOtherApps: true)
+                if alert.runModal() == .alertFirstButtonReturn { self.updater.install(manifest) }
+                return
+            case .upToDate:
+                alert.messageText = "DockAnchor is up to date"
+                alert.informativeText = "Version \(self.updater.currentVersion) is the newest release."
+            case .failed(let message):
+                alert.messageText = "Couldn't check for updates"
+                alert.informativeText = message
+            default:
+                return
+            }
+            NSApp.activate(ignoringOtherApps: true)
+            alert.runModal()
+        }
+    }
+
     @objc private func toggleResizeWindows() {
         controller.setResizeMaximizedWindows(!controller.config.resizeMaximizedWindows)
     }
@@ -137,11 +195,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func toggleLaunchAtLogin() {
         do {
-            if SMAppService.mainApp.status == .enabled {
-                try SMAppService.mainApp.unregister()
-            } else {
-                try SMAppService.mainApp.register()
-            }
+            try LaunchAtLogin.set(!LaunchAtLogin.isEnabled)
         } catch {
             NSAlert(error: error).runModal()
         }

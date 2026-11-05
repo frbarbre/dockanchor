@@ -9,6 +9,8 @@
 | Enable Dock Lock | Global on/off switch |
 | Lock Dock to Display ▸ | Lock to a display for the current screen setup and move the Dock there. *Don't Lock on This Setup* removes the lock |
 | Resize Maximized Windows | Fit maximized windows to the Dock automatically (on by default) |
+| Check for Updates… | Shows the installed version. Becomes *Install Update x.y.z* when a newer release is found |
+| Install Updates Automatically | Install new releases without asking (on by default) |
 | Hotkeys… | Rebind the global hotkeys |
 | Launch at Login | Start DockAnchor when you log in |
 
@@ -39,8 +41,11 @@ dockanchor list [--json]       connected displays (* = locked for this setup)
 dockanchor lock <display>      lock for the current setup and move the Dock there
 dockanchor unlock              remove the lock for the current setup
 dockanchor enable | disable | toggle
+dockanchor login [on|off|toggle|status]   start DockAnchor at login
 dockanchor setups [--json]     saved screen setups (* = current)
 ```
+
+`login` needs the app to be running. macOS only lets an app register *itself* as a login item, so the CLI asks the app to do it and prints the result. If macOS answers *requires approval*, switch DockAnchor on under System Settings → General → Login Items.
 
 `<display>` accepts any of:
 
