@@ -1,0 +1,51 @@
+name: Build and Deploy TechDocs to S3
+
+on:
+  push:
+    branches: [main]
+    paths:
+      [
+        'docs/**',
+        'mkdocs.yml',
+        'catalog-info.yaml',
+        'README.md',
+        '.github/workflows/techdocs.yml',
+      ]
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_REGION: fsn1
+  AWS_ENDPOINT_URL: https://fsn1.your-objectstorage.com
+  AWS_BUCKET_NAME: ${{ secrets.AWS_BUCKET_NAME }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install MkDocs and TechDocs plugin
+        run: |
+          pip install mkdocs
+          pip install mkdocs-techdocs-core
+
+      - name: Install TechDocs CLI
+        run: bun install -g @techdocs/cli
+
+      - name: Build TechDocs
+        run: techdocs-cli generate --no-docker --verbose
+
+      - name: Upload TechDocs to S3
+        env:
+          REPO_NAME: ${{ github.event.repository.name }}
+        run: |
+          aws s3 sync ./site s3://$AWS_BUCKET_NAME/default/component/$REPO_NAME/ \
+            --endpoint-url $AWS_ENDPOINT_URL \
+            --region $AWS_REGION \
+            --delete
